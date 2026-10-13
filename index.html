@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
@@ -13,6 +13,7 @@
     .sub{color:var(--muted);margin:0 0 20px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
     label{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
+    textarea{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b1220;color:var(--ink);font:inherit;resize:vertical}
     input[type=text]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b1220;color:var(--ink);font:inherit}
     input[type=text]:focus{outline:2px solid #1d4ed8}
     .drop{border:2px dashed #334155;border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;color:var(--muted);transition:.15s}
@@ -51,8 +52,9 @@
       <li>Envie a versão atual do trabalho em <strong>Word (.docx)</strong> ou <strong>PDF</strong>.</li>
       <li><strong>Cada código de matrícula pode usar uma única vez.</strong> Envie a versão mais completa que tiverem.</li>
       <li>O feedback é gerado por inteligência artificial em fase de testes. Use como orientação, não como nota.</li>
+      <li>A IA pode errar. Leia o feedback com senso crítico, confira com o material do curso e decida com o grupo o que vale incorporar.</li>
       <li>Gráficos e tabelas em imagem não são lidos, só o texto.</li>
-      <li>Se der erro antes do feedback aparecer, o uso não é descontado e vocês podem tentar de novo.</li>
+      <li>Se der erro antes do feedback aparecer, o uso não é descontado e você pode tentar de novo.</li>
     </ul>
   </div>
 
@@ -68,6 +70,10 @@
       <div class="file" id="fileName"></div>
     </div>
     <input type="file" id="fileInput" accept=".pdf,.docx" hidden />
+
+    <div style="height:16px"></div>
+    <label for="foco">Em que vocês querem um olhar mais atento? (opcional)</label>
+    <textarea id="foco" rows="3" maxlength="1000" placeholder="Ex.: não sabemos se nossos controles fazem sentido; queremos saber se a interpretação dos coeficientes está certa"></textarea>
 
     <label class="check"><input type="checkbox" id="confirm" />
       <span>Entendo que só posso pedir esta revisão uma vez com este código e que este é o arquivo que quero revisar.</span></label>
@@ -145,7 +151,7 @@
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ code: $('code').value.trim(), arquivo: file.name, texto })
+        body: JSON.stringify({ code: $('code').value.trim(), arquivo: file.name, texto, foco: $('foco').value.trim() })
       });
       let data = {};
       try { data = await res.json(); } catch (e) {}
