@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
@@ -49,7 +49,7 @@
   <div class="card">
     <ul class="rules">
       <li>Envie a versão atual do trabalho em <strong>Word (.docx)</strong> ou <strong>PDF</strong>.</li>
-      <li><strong>Cada grupo pode usar uma única vez.</strong> Envie a versão mais completa que tiverem.</li>
+      <li><strong>Cada código de matrícula pode usar uma única vez.</strong> Envie a versão mais completa que tiverem.</li>
       <li>O feedback é gerado por inteligência artificial em fase de testes. Use como orientação, não como nota.</li>
       <li>Gráficos e tabelas em imagem não são lidos, só o texto.</li>
       <li>Se der erro antes do feedback aparecer, o uso não é descontado e vocês podem tentar de novo.</li>
@@ -57,7 +57,7 @@
   </div>
 
   <div class="card" id="formCard">
-    <label for="code">Código de matrícula de um dos membros do grupo</label>
+    <label for="code">Código de matrícula</label>
     <input type="text" id="code" placeholder="Ex: C123456" autocomplete="off" />
 
     <div style="height:16px"></div>
@@ -70,7 +70,7 @@
     <input type="file" id="fileInput" accept=".pdf,.docx" hidden />
 
     <label class="check"><input type="checkbox" id="confirm" />
-      <span>Entendo que meu grupo só pode pedir esta revisão uma vez e que este é o arquivo que queremos revisar.</span></label>
+      <span>Entendo que só posso pedir esta revisão uma vez com este código e que este é o arquivo que quero revisar.</span></label>
 
     <button class="send" id="send" disabled>Pedir revisão</button>
     <div class="status" id="status"></div>
@@ -89,7 +89,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script>
   // Cole aqui o endereço do App da Web do Google Apps Script (termina em /exec)
-  const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwP8LKJjhaQH2CD2ybZ5LqM5KpDtyUS91ih3ZBG7gU13IDwLnoJwayNsp1Kk3xn-_wP/exec';
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
   const $ = id => document.getElementById(id);
