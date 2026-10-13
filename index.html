@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Revisão do Trabalho</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--bg:#0f172a;--panel:#111827;--ink:#e5e7eb;--muted:#9ca3af;--accent:#22c55e;--line:#1f2937;--warn:#f59e0b;--err:#f87171}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell}
+    .wrap{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+    h1{margin:0 0 4px;font-size:1.7rem}
+    .sub{color:var(--muted);margin:0 0 20px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+    label{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
+    input[type=text]{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b1220;color:var(--ink);font:inherit}
+    input[type=text]:focus{outline:2px solid #1d4ed8}
+    .drop{border:2px dashed #334155;border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;color:var(--muted);transition:.15s}
+    .drop:hover,.drop.over{border-color:var(--accent);color:var(--ink)}
+    .drop strong{color:var(--ink)}
+    .file{margin-top:10px;font-size:14px;color:var(--accent);word-break:break-all}
+    .check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--muted);margin:16px 0}
+    .check input{margin-top:3px}
+    .send{width:100%;background:var(--accent);color:#06240f;border:none;padding:14px;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer}
+    .send[disabled]{opacity:.5;cursor:not-allowed}
+    .status{margin-top:12px;font-size:14px;color:var(--muted);min-height:20px}
+    .status.err{color:var(--err)}
+    .rules{font-size:14px;color:var(--muted);margin:0;padding-left:18px}
+    .rules li{margin:4px 0}
+    #out{display:none}
+    #feedback h2{font-size:1.1rem;margin:22px 0 8px;color:#86efac;border-bottom:1px solid var(--line);padding-bottom:6px}
+    #feedback h2:first-child{margin-top:0}
+    #feedback h3{font-size:1rem;margin:16px 0 6px}
+    #feedback p{margin:8px 0}
+    #feedback ul,#feedback ol{margin:6px 0 10px;padding-left:22px}
+    #feedback li{margin:4px 0}
+    .tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .btn{background:#1f2937;border:1px solid #334155;color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;font:inherit;font-size:14px}
+    .btn:hover{filter:brightness(1.2)}
+    .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}
+    @keyframes s{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Revisão do Trabalho</h1>
+  <p class="sub">Econometria I · FGV EESP · feedback automático do que foi feito até agora</p>
+
+  <div class="card">
+    <ul class="rules">
+      <li>Envie a versão atual do trabalho em <strong>Word (.docx)</strong> ou <strong>PDF</strong>.</li>
+      <li><strong>Cada grupo pode usar uma única vez.</strong> Envie a versão mais completa que tiverem.</li>
+      <li>O feedback é gerado por inteligência artificial em fase de testes. Use como orientação, não como nota.</li>
+      <li>Gráficos e tabelas em imagem não são lidos, só o texto.</li>
+      <li>Se der erro antes do feedback aparecer, o uso não é descontado e vocês podem tentar de novo.</li>
+    </ul>
+  </div>
+
+  <div class="card" id="formCard">
+    <label for="code">Código de matrícula de um dos membros do grupo</label>
+    <input type="text" id="code" placeholder="Ex: C123456" autocomplete="off" />
+
+    <div style="height:16px"></div>
+    <label>Arquivo do trabalho</label>
+    <div class="drop" id="drop">
+      <strong>Clique para escolher</strong> ou arraste o arquivo aqui<br/>
+      <span style="font-size:13px">.docx ou .pdf</span>
+      <div class="file" id="fileName"></div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.docx" hidden />
+
+    <label class="check"><input type="checkbox" id="confirm" />
+      <span>Entendo que meu grupo só pode pedir esta revisão uma vez e que este é o arquivo que queremos revisar.</span></label>
+
+    <button class="send" id="send" disabled>Pedir revisão</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card" id="out">
+    <div id="feedback"></div>
+    <div class="tools">
+      <button class="btn" id="copy">Copiar feedback</button>
+      <button class="btn" id="download">Baixar como .txt</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script>
+  // Cole aqui o endereço do App da Web do Google Apps Script (termina em /exec)
+  const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  const $ = id => document.getElementById(id);
+  let file = null, rawFeedback = '';
+
+  function refresh() {
+    $('send').disabled = !(file && $('code').value.trim() && $('confirm').checked);
+  }
+  function setFile(f) {
+    if (!f) return;
+    const ok = /\.(pdf|docx)$/i.test(f.name);
+    if (!ok) { status('Formato não aceito. Envie .docx ou .pdf.', true); return; }
+    file = f; $('fileName').textContent = f.name; status(''); refresh();
+  }
+  function status(msg, err=false, spin=false) {
+    $('status').className = 'status' + (err ? ' err' : '');
+    $('status').innerHTML = (spin ? '<span class="spin"></span>' : '') + escapeHtml(msg);
+  }
+
+  $('drop').onclick = () => $('fileInput').click();
+  $('fileInput').onchange = e => setFile(e.target.files[0]);
+  $('drop').ondragover = e => { e.preventDefault(); $('drop').classList.add('over'); };
+  $('drop').ondragleave = () => $('drop').classList.remove('over');
+  $('drop').ondrop = e => { e.preventDefault(); $('drop').classList.remove('over'); setFile(e.dataTransfer.files[0]); };
+  $('code').oninput = refresh; $('confirm').onchange = refresh;
+
+  async function extractText(f) {
+    const buf = await f.arrayBuffer();
+    if (/\.docx$/i.test(f.name)) {
+      const r = await mammoth.extractRawText({ arrayBuffer: buf });
+      return r.value;
+    }
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let out = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const c = await page.getTextContent();
+      out.push(c.items.map(i => i.str).join(' '));
+    }
+    return out.join('\n\n');
+  }
+
+  $('send').onclick = async () => {
+    $('send').disabled = true;
+    try {
+      status('Lendo o arquivo...', false, true);
+      const texto = (await extractText(file)).replace(/[ \t]+/g, ' ').trim();
+      if (texto.length < 500) {
+        status('Não consegui ler texto suficiente. Se o PDF for escaneado (imagem), envie a versão em Word.', true);
+        refresh(); return;
+      }
+      status('Revisando o trabalho. Isso pode levar até 1 minuto, não feche a página...', false, true);
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ code: $('code').value.trim(), arquivo: file.name, texto })
+      });
+      let data = {};
+      try { data = await res.json(); } catch (e) {}
+      if (!res.ok || !data.feedback) {
+        status(data.error || 'Não foi possível gerar a revisão agora. Tente de novo mais tarde.', true);
+        refresh(); return;
+      }
+      rawFeedback = data.feedback;
+      $('feedback').innerHTML = md(rawFeedback);
+      $('formCard').style.display = 'none';
+      $('out').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      status('Não consegui falar com o servidor. Tente de novo em alguns minutos.', true);
+      refresh();
+    }
+  };
+
+  $('copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(rawFeedback); $('copy').textContent = 'Copiado!'; }
+    catch (e) { $('copy').textContent = 'Não foi possível copiar'; }
+    setTimeout(() => $('copy').textContent = 'Copiar feedback', 2000);
+  };
+  $('download').onclick = () => {
+    const blob = new Blob([rawFeedback], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'revisao-trabalho.txt';
+    a.click();
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function inline(s) {
+    return escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<em>$2</em>');
+  }
+  function md(src) {
+    const lines = String(src).replace(/\r/g, '').split('\n');
+    let html = '', list = null;
+    const close = () => { if (list) { html += `</${list}>`; list = null; } };
+    for (const l of lines) {
+      let m;
+      if (m = l.match(/^#{1,2}\s+(.*)/)) { close(); html += `<h2>${inline(m[1])}</h2>`; }
+      else if (m = l.match(/^#{3,}\s+(.*)/)) { close(); html += `<h3>${inline(m[1])}</h3>`; }
+      else if (m = l.match(/^\s*[-*•]\s+(.*)/)) { if (list !== 'ul') { close(); html += '<ul>'; list = 'ul'; } html += `<li>${inline(m[1])}</li>`; }
+      else if (m = l.match(/^\s*\d+[.)]\s+(.*)/)) { if (list !== 'ol') { close(); html += '<ol>'; list = 'ol'; } html += `<li>${inline(m[1])}</li>`; }
+      else if (l.trim() === '') { close(); }
+      else { close(); html += `<p>${inline(l)}</p>`; }
+    }
+    close();
+    return html;
+  }
+</script>
+</body>
+</html>
