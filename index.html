@@ -35,6 +35,13 @@
     #feedback p{margin:8px 0}
     #feedback ul,#feedback ol{margin:6px 0 10px;padding-left:22px}
     #feedback li{margin:4px 0}
+    #feedback h4{font-size:.95rem;margin:14px 0 6px;color:var(--muted)}
+    #feedback .tw{overflow-x:auto;margin:10px 0}
+    #feedback table{border-collapse:collapse;width:100%;font-size:14px}
+    #feedback th,#feedback td{border:1px solid #334155;padding:6px 8px;text-align:left;vertical-align:top}
+    #feedback th{background:#1f2937}
+    #feedback hr{border:none;border-top:1px solid var(--line);margin:18px 0}
+    #feedback blockquote{margin:8px 0;padding:6px 12px;border-left:3px solid #334155;color:var(--ink)}
     .tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
     .btn{background:#1f2937;border:1px solid #334155;color:var(--ink);border-radius:10px;padding:9px 14px;cursor:pointer;font:inherit;font-size:14px}
     .btn:hover{filter:brightness(1.2)}
@@ -45,13 +52,13 @@
 <body>
 <div class="wrap">
   <h1>Revisão do Trabalho</h1>
-  <p class="sub">Econometria I · FGV EESP · feedback automático do que foi feito até agora</p>
+  <p class="sub">Econometria I · FGV EESP · feedback da versão que vocês pretendem entregar</p>
 
   <div class="card">
     <ul class="rules">
-      <li>Envie a versão atual do trabalho em <strong>Word (.docx)</strong> ou <strong>PDF</strong>.</li>
+      <li>Envie a versão que pretendem entregar, de preferência em <strong>PDF</strong>. Só com PDF a revisão consegue conferir o limite de 15 páginas. Word (.docx) também é aceito.</li>
       <li><strong>Cada dupla pode usar uma única vez.</strong> Basta um integrante enviar, com o próprio código. Combinem antes e enviem a versão mais completa que tiverem.</li>
-      <li>O feedback é gerado por inteligência artificial em fase de testes. Use como orientação, não como nota.</li>
+      <li>O feedback é gerado por inteligência artificial e segue as regras do trabalho e o roteiro de revisão da disciplina. Ele aponta caminhos de aprimoramento; não dá nota nem avalia o trabalho.</li>
       <li>A IA pode errar. Leia o feedback com senso crítico, confira com o material do curso e decida com o grupo o que vale incorporar.</li>
       <li>Gráficos e tabelas em imagem não são lidos, só o texto.</li>
       <li>Se der erro antes do feedback aparecer, o uso não é descontado e você pode tentar de novo.</li>
@@ -126,32 +133,33 @@
     const buf = await f.arrayBuffer();
     if (/\.docx$/i.test(f.name)) {
       const r = await mammoth.extractRawText({ arrayBuffer: buf });
-      return r.value;
+      return { texto: r.value, formato: 'docx', paginas: 0 };
     }
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     let out = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       const page = await pdf.getPage(p);
       const c = await page.getTextContent();
-      out.push(c.items.map(i => i.str).join(' '));
+      out.push('[Página ' + p + ']\n' + c.items.map(i => i.str).join(' '));
     }
-    return out.join('\n\n');
+    return { texto: out.join('\n\n'), formato: 'pdf', paginas: pdf.numPages };
   }
 
   $('send').onclick = async () => {
     $('send').disabled = true;
     try {
       status('Lendo o arquivo...', false, true);
-      const texto = (await extractText(file)).replace(/[ \t]+/g, ' ').trim();
+      const lido = await extractText(file);
+      const texto = lido.texto.replace(/[ \t]+/g, ' ').trim();
       if (texto.length < 500) {
         status('Não consegui ler texto suficiente. Se o PDF for escaneado (imagem), envie a versão em Word.', true);
         refresh(); return;
       }
-      status('Revisando o trabalho. Isso pode levar até 1 minuto, não feche a página...', false, true);
+      status('Revisando o trabalho. Isso pode levar até 3 minutos, não feche a página...', false, true);
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ code: $('code').value.trim(), arquivo: file.name, texto, foco: $('foco').value.trim() })
+        body: JSON.stringify({ code: $('code').value.trim(), arquivo: file.name, texto, foco: $('foco').value.trim(), formato: lido.formato, paginas: lido.paginas })
       });
       let data = {};
       try { data = await res.json(); } catch (e) {}
@@ -191,12 +199,25 @@
   }
   function md(src) {
     const lines = String(src).replace(/\r/g, '').split('\n');
-    let html = '', list = null;
-    const close = () => { if (list) { html += `</${list}>`; list = null; } };
+    let html = '', list = null, tab = null;
+    const closeTab = () => {
+      if (!tab) return;
+      const rows = tab.filter(r => !/^\s*\|?\s*:?-{2,}/.test(r));
+      const cells = r => r.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => inline(c.trim()));
+      html += '<div class="tw"><table>';
+      rows.forEach((r, i) => { const t = i === 0 ? 'th' : 'td'; html += '<tr>' + cells(r).map(c => `<${t}>${c}</${t}>`).join('') + '</tr>'; });
+      html += '</table></div>'; tab = null;
+    };
+    const close = () => { closeTab(); if (list) { html += `</${list}>`; list = null; } };
     for (const l of lines) {
       let m;
+      if (/^\s*\|.*\|\s*$/.test(l)) { if (list) { html += `</${list}>`; list = null; } (tab = tab || []).push(l); continue; }
+      closeTab();
+      if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)) { close(); html += '<hr>'; continue; }
       if (m = l.match(/^#{1,2}\s+(.*)/)) { close(); html += `<h2>${inline(m[1])}</h2>`; }
-      else if (m = l.match(/^#{3,}\s+(.*)/)) { close(); html += `<h3>${inline(m[1])}</h3>`; }
+      else if (m = l.match(/^###\s+(.*)/)) { close(); html += `<h3>${inline(m[1])}</h3>`; }
+      else if (m = l.match(/^#{4,}\s+(.*)/)) { close(); html += `<h4>${inline(m[1])}</h4>`; }
+      else if (m = l.match(/^\s*>\s?(.*)/)) { close(); if (m[1].trim()) html += `<blockquote>${inline(m[1])}</blockquote>`; }
       else if (m = l.match(/^\s*[-*•]\s+(.*)/)) { if (list !== 'ul') { close(); html += '<ul>'; list = 'ul'; } html += `<li>${inline(m[1])}</li>`; }
       else if (m = l.match(/^\s*\d+[.)]\s+(.*)/)) { if (list !== 'ol') { close(); html += '<ol>'; list = 'ol'; } html += `<li>${inline(m[1])}</li>`; }
       else if (l.trim() === '') { close(); }
